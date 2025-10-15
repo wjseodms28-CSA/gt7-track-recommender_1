@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>서킷스토리 — GT7 트랙 추천기</title>
+  <meta name="author" content="서킷스토리">
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#ff6b6b;--muted:#9aa4b2;--glass:rgba(255,255,255,0.03)}
+    html,body{height:100%;margin:0;font-family:Inter,Apple SD Gothic Neo,Malgun Gothic,"Noto Sans KR",sans-serif;background:linear-gradient(180deg,#07090b 0%,#0b1220 100%);color:#e6eef6}
+    .wrap{max-width:980px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;gap:16px}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:6px 0 18px;color:var(--muted)}
+    .panel{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 20px rgba(2,6,23,0.6)}
+    .selectors{display:flex;gap:12px;flex-wrap:wrap}
+    .card{background:var(--glass);padding:12px;border-radius:10px;min-width:180px}
+    .btn{background:linear-gradient(90deg,var(--accent),#ff9a68);border:none;padding:10px 14px;border-radius:8px;color:#081226;font-weight:700;cursor:pointer}
+    .smallbtn{background:#0b2330;border-radius:8px;padding:6px 8px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;color:var(--muted)}
+    .results{display:grid;grid-template-columns:1fr;gap:12px;margin-top:14px}
+    .trackGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;align-items:stretch}
+    .track{background:#07101a;border-radius:10px;padding:12px;border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;justify-content:space-between;min-height:180px}
+    .track h3{margin:0 0 6px;font-size:16px}
+    .tag{display:inline-block;background:rgba(255,255,255,0.04);padding:6px;border-radius:6px;font-size:12px;margin-right:6px;color:var(--muted)}
+    .muted{color:var(--muted);font-size:13px}
+    .small{font-size:13px}
+    footer{margin-top:18px;color:var(--muted);font-size:13px}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .mode{display:inline-flex;align-items:center;gap:8px}
+    .pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.02);cursor:pointer;user-select:none;outline:none}
+    .pill:focus{box-shadow:0 0 0 3px rgba(159,208,255,0.12)}
+    .pill.active{background:linear-gradient(90deg,var(--accent),#ff9a68);color:#061226;font-weight:700}
+    .howto{background:#071a1a;padding:10px;border-radius:8px;margin-top:8px}
+    .qr-sample{display:flex;gap:12px;align-items:center}
+    .detail{background:#081422;padding:12px;border-radius:8px;margin-top:12px}
+    .status{padding:8px;border-radius:8px;margin-bottom:8px}
+    .status.ok{background:rgba(34,197,94,0.12);color:#9be6a8}
+    .status.err{background:rgba(220,38,38,0.08);color:#ffb3b3}
+    .groupHeader{font-weight:700}
+    @media(max-width:600px){.selectors{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div style="width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,#081226,#0b3350);display:flex;align-items:center;justify-content:center;font-weight:700">GT7</div>
+      <div style="flex:1">
+        <h1>서킷스토리 — 트랙 추천기</h1>
+        <p class="lead">QR 스캔 → 인원/스타일 선택 → 추천 트랙 & 플레이 가이드 제공. 손님이 직접 고르기 쉬운 페이지입니다.</p>
+        <div id="statusBanner" class="status" aria-live="polite" style="display:none"></div>
+      </div>
+    </header>
+
+    <section class="panel" aria-labelledby="step1">
+      <h2 id="step1">1) 인원수를 선택하세요</h2>
+      <div class="selectors" style="margin-top:12px">
+        <label class="card"><input type="radio" name="people" value="solo" checked> 1인 (혼자)</label>
+        <label class="card"><input type="radio" name="people" value="friends"> 2인 (친구)</label>
+        <label class="card"><input type="radio" name="people" value="couple"> 2인 (커플)</label>
+        <label class="card"><input type="radio" name="people" value="group"> 3인 이상 (단체)</label>
+      </div>
+
+      <h2 style="margin-top:16px">2) 원하는 플레이 스타일을 고르세요</h2>
+      <div class="controls" id="modes" role="list">
+        <div class="pill" data-mode="light" role="button" tabindex="0" aria-pressed="false">가벼운 데이트 / 드라이브</div>
+        <div class="pill" data-mode="comp" role="button" tabindex="0" aria-pressed="false">경쟁 / 토너먼트</div>
+        <div class="pill" data-mode="practice" role="button" tabindex="0" aria-pressed="false">연습 / 타임어택</div>
+        <div class="pill" data-mode="party" role="button" tabindex="0" aria-pressed="false">파티 / 내구</div>
+        <div class="pill" data-mode="offroad" role="button" tabindex="0" aria-pressed="false">오프로드 / 이색</div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="btn" id="go">추천 받기</button>
+        <button class="smallbtn" id="shuffleBtn" title="다른 추천 보기">다른 추천 보기</button>
+      </div>
+
+      <div class="howto muted" style="margin-top:12px">사용법: 인원수와 플레이 스타일을 선택하면 <strong>추천 트랙 목록</strong>이 나옵니다. 트랙 카드의 <strong>간단 가이드</strong> 버튼을 눌러 자세한 진행 가이드를 확인하세요.</div>
+    </section>
+
+    <section class="panel" style="margin-top:12px">
+      <h2>추천 트랙</h2>
+      <div class="results" id="results">
+        <div class="trackGrid" id="topPicks"></div>
+        <div class="trackGrid" id="alternatePicks"></div>
+        <div class="trackGrid" id="offroadPicks"></div>
+        <div id="detailPanel" class="detail" style="display:none"></div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="muted">호스팅 안내: 이 HTML 파일을 GitHub Pages / Netlify / 매장 웹서버에 올리면 QR코드(페이지 URL)로 손님이 바로 접속할 수 있습니다.</div>
+      <div style="margin-top:8px" class="qr-sample muted">QR 생성 예시(호스트 URL 대체): <img id="qrImg" src="" alt="QR 샘플(호스트 URL 필요)" style="height:72px;border-radius:8px;border:1px solid rgba(255,255,255,0.03)"> <div style="font-size:13px">QR 생성은 <a href="https://goqr.me/" target="_blank" style="color:#9fd0ff">goqr.me</a> 또는 <a href="https://api.qrserver.com/" target="_blank" style="color:#9fd0ff">qrserver API</a>를 사용하세요.</div></div>
+    </footer>
+  </div>
+
+  <script>
+    "use strict";
+
+    // Simple safe toggle (used by event handlers)
+    window.safeTogglePill = function(p){
+      try{
+        if(!p) return;
+        const isActive = p.classList.toggle("active");
+        p.setAttribute("aria-pressed", isActive ? "true" : "false");
+        console.log("[safeTogglePill]", p.dataset.mode, isActive);
+      }catch(e){ console.error(e); }
+    };
+
+    function showStatus(message, ok=true){
+      try{
+        const el = document.getElementById("statusBanner");
+        if(!el) return;
+        el.style.display = "block";
+        el.className = "status " + (ok? "ok" : "err");
+        el.textContent = message;
+      }catch(e){ console.error(e); }
+    }
+
+    window.addEventListener("error", (ev)=>{ console.error(ev.error || ev.message, ev); showStatus("오류 발생: 콘솔을 확인하세요", false); });
+    window.addEventListener("unhandledrejection", (ev)=>{ console.error(ev.reason); showStatus("오류 발생: 콘솔을 확인하세요", false); });
+
+    function $all(sel){ try{ return Array.from(document.querySelectorAll(sel)); }catch(e){ return []; } }
+    function $one(sel){ try{ return document.querySelector(sel); }catch(e){ return null; } }
+
+    document.addEventListener("DOMContentLoaded", ()=>{
+      try{
+        const required = ["#go","#shuffleBtn","#topPicks","#alternatePicks","#offroadPicks","#detailPanel"];
+        const missing = required.filter(s=>!$one(s));
+        if(missing.length){ showStatus("초기화 실패: 요소 누락 - " + missing.join(", "), false); console.error("missing:", missing); return; }
+
+        // TRACKS: use double-quoted strings to avoid accidental unescaped single quotes
+        const TRACKS = window.TRACKS_OVERRIDE || [
+          {en:"24 Heures du Mans", ko:"르망 24시", tags:["group","friends"], modes:["엔듀런스","팀 릴레이"], note:"긴 스트레이트 기반의 내구 레이스에 적합합니다."},
+          {en:"Alsace (Original)", ko:"알자스", tags:["couple","solo"], modes:["드라이브","포토 세션"], note:"풍경이 좋아 데이트용으로 추천합니다."},
+          {en:"Autodrome Lago Maggiore", ko:"레이크 마조레 서킷", tags:["friends","solo"], modes:["토너먼트","세팅 연습"], note:"다양한 레이아웃을 가진 레이크 마조레 서킷입니다. 경치가 좋아 드라이브와 연습 모두에 적합합니다."},
+          {en:"Interlagos", ko:"인터라고스", tags:["friends","group"], modes:["스프린트","토너먼트"], note:"인터라고스(Autódromo José Carlos Pace)는 업다운과 백스트레이트가 조화를 이루는 포장 서킷입니다. 도시 경관과 함께 기술적 코너가 많아 경쟁 레이스에 적합합니다."},
+          {en:"Monza", ko:"몬차", tags:["friends","group"], modes:["스프린트","스피드 챌린지"], note:"몬차 서킷은 전통적인 고속 포장 트랙입니다 — 긴 스트레이트와 고속 섹션이 특징이며 드래프트와 최고속 경쟁에 적합합니다."},
+          {en:"Spa-Francorchamps", ko:"스파", tags:["friends","solo"], modes:["엔듀런스","타임어택"], note:"스파 프랑코르샹은 산악 지형을 가로지르는 아스팔트 서킷으로 고저차와 빠른 고속 코너(Eau Rouge 등)가 인상적입니다. 기후 변화가 잦아 타이어·전략 관리가 중요합니다."},
+          {en:"Blue Moon Bay Speedway", ko:"블루 문 베이", tags:["group","friends"], modes:["릴레이","미니 토너먼트"], note:"파티성 이벤트에 어울립니다."},
+          {en:"Broad Bean Raceway", ko:"브로드 빈", tags:["couple","friends"], modes:["체험","튜토리얼"], note:"짧고 쉬워 초보·데이트에 적합합니다."},
+          {en:"Barcelona-Catalunya", ko:"바르셀로나", tags:["solo","friends"], modes:["연습","그리드 레이스"], note:"밸런스가 좋아 연습에 적합합니다."},
+          {en:"Barcelona-Catalunya (Autocross)", ko:"바르셀로나(오토크로스)", tags:["friends","offroad"], modes:["오프로드","이색"], note:"바르셀로나 카탈루냐의 오토크로스(비포장) 코스입니다 — 짧고 기술적인 더트/그래블 섹션이 포함되어 오프로드 이벤트나 이색 체험에 적합합니다."},
+          {en:"Goodwood", ko:"굿우드", tags:["couple","solo"], modes:["드라이브","포토"], note:"굿우드는 클래식한 분위기의 포장 서킷으로 역사적 전시와 경치가 매력적입니다. 낮은 난이도 섹션이 많아 데이트·체험용으로 적합합니다."},
+          {en:"Dragon Trail (Gardens)", ko:"드래곤 트레일(가든)", tags:["friends","group"], modes:["토너먼트","릴레이"], note:"중속 추월 포인트가 많습니다."},
+          {en:"Fuji Speedway", ko:"후지 스피드웨이", tags:["friends","solo"], modes:["스프린트","세팅"], note:"후지 스피드웨이는 긴 직선과 고속 구간이 특징인 포장 서킷이며, 근처에 후지산 경치가 보이는 것이 매력입니다. 장거리 가속·브레이킹 연습에 적합합니다."},
+          {en:"Laguna Seca", ko:"라구나 세카", tags:["solo","friends"], modes:["타임어택","그리드 레이스"], note:"라구나 세카는 짧은 포장 서킷으로 코크스크류 등 기술적 섹션이 유명합니다. 아스팔트 기반이며 타임어택과 기술 연습에 적합합니다."},
+          {en:"Mount Panorama", ko:"마운트 파노라마", tags:["friends","solo"], modes:["엔듀런스","도전"], note:"마운트 파노라마는 급격한 고저차와 좁은 구간이 혼재된 포장 서킷입니다. 산악·도시가 혼합된 경관이 특징이며 차량 제어와 브레이킹 관리가 매우 중요합니다."},
+          {en:"Nürburgring Nordschleife", ko:"뉘르부르크링 노르트슐라이페", tags:["solo","friends"], modes:["타임어택","엔듀런스"], note:"뉘르부르크링 노르트슐라이페는 매우 긴 포장(아스팔트) 트랙으로 복잡한 코너와 다양한 노면 특성이 있어 숙련자에게 권장됩니다."},
+          {en:"Special Stage Route X", ko:"스페셜 스테이지 루트 X", tags:["friends","solo","group"], modes:["스피드 챌린지","이색","타임어택"], note:"스페셜 스테이지 루트 X는 약 30km 길이의 가상 오벌(oval) 트랙으로, 두 개의 12km 직선과 고배율 뱅크 코너로 구성되어 있습니다. 최고속·드래프팅(슬립스트림) 경쟁에 최적화된 이색적 고속 트랙으로, 타임어택·스피드 챌린지 등 고속 이벤트에 추천합니다."},
+          {en:"Suzuka (Full)", ko:"스즈카", tags:["solo","friends"], modes:["타임어택","그리드 레이스"], note:"스즈카는 S자와 고속 코너가 연속되는 기술적 포장 트랙입니다. 차량 밸런스와 중속 상태에서의 안정성이 중요합니다."},
+          {en:"Trial Mountain", ko:"트라이얼 마운틴", tags:["solo","couple"], modes:["연습","체험"], note:"학습과 연습에 좋은 밸런스 코스."},
+          {en:"Tsukuba", ko:"츠쿠바", tags:["solo","friends"], modes:["타임어택","스프린트"], note:"츠쿠바는 일본의 짧고 기술적인 포장 서킷으로 빠른 스프린트와 타임어택에 적합합니다."},
+          {en:"Deep Forest Raceway", ko:"딥 포레스트", tags:["solo","couple"], modes:["드라이브","타임어택"], note:"딥 포레스트는 숲속을 배경으로 한 전통적 포장 서킷으로 GT 분위기와 경치가 조화롭습니다."},
+          {en:"Sardegna Road Track", ko:"사르데냐 로드 트랙", tags:["couple","group"], modes:["드라이브","테크니컬"], note:"사르데냐 섬의 폐쇄 공도(아스팔트) 기반 로드 트랙입니다. 해안 및 마을 풍경이 섞여 있으며 비포장(오프로드) 구간은 없습니다."},
+          {en:"Sardegna Windmills", ko:"사르데냐 윈드밀(비포장)", tags:["group","friends","offroad"], modes:["오프로드","릴레이"], note:"사르데냐 윈드밀은 비포장 섹션이 포함된 오프로드 특화 코스입니다. 언덕·모래·그래블 섹션이 있어 오프로드·드리프트·파티 이벤트에 적합합니다."},
+          {en:"Fisherman's Ranch", ko:"피셔맨스 랜치", tags:["group","friends","offroad"], modes:["오프로드","드리프트"], note:"험로 & 드리프트 친화, 파티성 이벤트로 추천."},
+          {en:"Colorado Springs (Dirt)", ko:"콜로라도 스프링스 (더트)", tags:["group","friends","offroad"], modes:["오프로드","이색"], note:"콜로라도 스프링스 (더트)는 비포장 더트 트랙으로 랠리 스타일 주행과 오프로드 이벤트에 최적화되어 있습니다."},
+          {en:"Daytona", ko:"데이토나", tags:["friends","group"], modes:["스프린트","스피드 챌린지"], note:"데이토나는 오벌과 로드 섹션을 혼합한 포장 트랙으로 고속 유지 능력과 오벌 레이스 경험에 적합합니다."},
+          {en:"Road Atlanta", ko:"로드 애틀랜타", tags:["solo","friends"], modes:["타임어택","그리드 레이스"], note:"로드 애틀랜타는 중고속과 테크니컬 섹션이 잘 조화된 포장 서킷입니다."},
+          {en:"Watkins Glen", ko:"왓킨스 글렌", tags:["friends","solo"], modes:["그리드 레이스","타임어택"], note:"흐름이 좋아 연속 코너 연습에 적합합니다."},
+          {en:"Willow Springs", ko:"윌로우 스프링스", tags:["solo","friends"], modes:["스프린트","스피드 훈련"], note:"빠른 섹션이 많아 속도 연습에 좋습니다."},
+          {en:"High-Speed Ring", ko:"하이 스피드 링", tags:["friends","solo"], modes:["스피드 챌린지","타임어택"], note:"가상의 초고속 트랙으로 최고속 경쟁에 적합합니다."}
+        ];
+
+        // 요소 참조
+        let pillNodes = $all(".pill");
+        const goBtn = $one("#go");
+        const shuffleBtn = $one("#shuffleBtn");
+        const topPicksEl = $one("#topPicks");
+        const altPicksEl = $one("#alternatePicks");
+        const offPicksEl = $one("#offroadPicks");
+        const detailPanel = $one("#detailPanel");
+
+        function safeAdd(el, ev, fn){ if(el && typeof fn === "function"){ el.addEventListener(ev, fn); } }
+
+        function refreshPillNodes(){
+          pillNodes = $all(".pill");
+          pillNodes.forEach(p=>{
+            try{ p.setAttribute("role","button"); p.setAttribute("tabindex","0"); }catch(e){}
+            if(p.dataset.bound === "1") return;
+            p.dataset.bound = "1";
+            try{ p.style.touchAction = p.style.touchAction || "manipulation"; p.style.userSelect = "none"; }catch(e){}
+            try{ p.addEventListener("click", ()=>{ console.log("[pill click]", p.dataset.mode); togglePill(p); }); }catch(e){}
+            try{ p.addEventListener("keydown", (e)=>{ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); togglePill(p); } }); }catch(e){}
+            try{ p.addEventListener("pointerdown", (e)=>{ console.log("[pill pointerdown]", p.dataset.mode); togglePill(p); }, {passive:true}); }catch(e){}
+            try{ p.addEventListener("touchstart", (e)=>{ console.log("[pill touchstart]", p.dataset.mode); togglePill(p); }, {passive:true}); }catch(e){}
+            try{ p.onclick = p.onclick || function(){ window.safeTogglePill && window.safeTogglePill(p); }; }catch(e){}
+          });
+        }
+
+        const modesContainer = $one("#modes");
+        if(modesContainer){
+          safeAdd(modesContainer, "click", (e)=>{ const p = e.target.closest && e.target.closest('.pill'); if(p) window.safeTogglePill(p); });
+          safeAdd(modesContainer, "keydown", (e)=>{ if(e.key === "Enter" || e.key === " "){ const p = e.target.closest && e.target.closest('.pill'); if(p){ e.preventDefault(); window.safeTogglePill(p); } } });
+          try{ modesContainer.addEventListener("pointerdown", (e)=>{ const p = e.target.closest && e.target.closest('.pill'); if(p){ window.safeTogglePill(p); } }, {capture:true}); modesContainer.addEventListener("touchstart", (e)=>{ const p = e.target.closest && e.target.closest('.pill'); if(p){ window.safeTogglePill(p); } }, {passive:false}); }catch(err){}
+          try{ const mo = new MutationObserver(()=>{ refreshPillNodes(); }); mo.observe(modesContainer, {childList:true, subtree:true}); }catch(e){}
+          refreshPillNodes();
+        }
+
+        function togglePill(p){
+          try{ const active = p.classList.toggle("active"); p.setAttribute("aria-pressed", active ? "true" : "false"); }catch(e){ console.error(e); }
+        }
+
+        safeAdd(goBtn, "click", ()=> renderRecommendations());
+        safeAdd(shuffleBtn, "click", ()=> renderRecommendations(true));
+
+        function safeJoin(arr){ try{ return arr.join("\n"); }catch(e){ return String(arr); } }
+
+        function generateShareText(people,modes){
+          const peopleLabel = {solo:"1인(혼자)",friends:"2인(친구)",couple:"2인(커플)",group:"3인 이상(단체)"}[people] || people;
+          const modeLabel = modes.length ? modes.join(", ") : "선택 없음";
+          const recsArray = filterTracks(people,modes).slice(0,5).map(t=>`- ${t.ko}(${t.en}): ${t.note} 추천 모드: ${t.modes.join('/')}`);
+          const recs = safeJoin(recsArray);
+          const lines = ["서킷스토리 추천", `인원: ${peopleLabel}`, `플레이스타일: ${modeLabel}`, "추천 트랙:", recs];
+          return safeJoin(lines);
+        }
+
+        function filterTracks(people,modes){
+          try{
+            const mapping = {light:"드라이브", comp:"토너먼트", practice:"타임어택", party:"엔듀런스", offroad:"오프로드"};
+            const isOffroadModeSelected = Array.isArray(modes) && modes.includes("offroad");
+            // 오프로드가 단독으로 선택된 경우에만 비포장 트랙만 필터링합니다.
+            const isExclusiveOffroad = isOffroadModeSelected && Array.isArray(modes) && modes.length === 1;
+            let list;
+            if(isExclusiveOffroad){
+              // 오직 비포장 트랙만 추천
+              list = TRACKS.filter(t=> Array.isArray(t.tags) && t.tags.includes("offroad"));
+            }else{
+              // 그 외에는 인원수 태그를 기준으로 기본 후보군을 구성
+              list = TRACKS.filter(t=> Array.isArray(t.tags) && t.tags.includes(people));
+            }
+
+            if(!modes || modes.length===0) return list;
+            const desired = modes.map(m=>mapping[m]||m);
+            const exact = list.filter(t=> desired.some(d=>{
+              const inModes = Array.isArray(t.modes) && t.modes.join(' ').includes(d);
+              const inNote = t.note && t.note.includes(d);
+              const inTags = Array.isArray(t.tags) && t.tags.includes(d);
+              return inModes || inNote || inTags;
+            }));
+            const others = list.filter(t=>!exact.includes(t));
+            return exact.concat(others);
+          }catch(e){ console.error('filterTracks failed', e); return TRACKS.slice(0,10); }
+        }
+
+        function renderRecommendations(shuffle=false){
+          try{
+            const people = $one('input[name="people"]:checked')?.value || 'solo';
+            const modes = pillNodes.filter(x=>x.classList.contains('active')).map(x=>x.dataset.mode);
+            let items = filterTracks(people,modes);
+            if(shuffle){ items = shuffleArray(items); }
+            const offroad = items.filter(t=>Array.isArray(t.tags) && t.tags.includes('offroad'));
+            const nonOff = items.filter(t=>!Array.isArray(t.tags) || !t.tags.includes('offroad'));
+            const top = nonOff.slice(0,3); const alt = nonOff.slice(3,6);
+            topPicksEl.innerHTML = ''; altPicksEl.innerHTML = ''; offPicksEl.innerHTML = ''; detailPanel.style.display = 'none';
+            if(top.length){ renderGrid(top, topPicksEl, '추천 트랙 — Top Picks'); }
+            if(alt.length){ renderGrid(alt, altPicksEl, '대체 추천 — Alternate Picks'); }
+            if(offroad.length){ renderGrid(offroad, offPicksEl, '오프로드 추천 — Offroad Picks'); }
+            if(!top.length && !alt.length && !offroad.length){ topPicksEl.innerHTML = '<div class="muted">조건에 맞는 트랙이 없습니다. 다른 옵션을 선택해보세요.</div>'; }
+            showStatus('정상: 추천 목록이 갱신되었습니다.', true);
+          }catch(e){ console.error('renderRecommendations failed', e); showStatus('추천 생성 중 오류가 발생했습니다. 콘솔을 확인하세요.', false); }
+        }
+
+        function renderGrid(list, container, title){
+          try{
+            const header = document.createElement('div'); header.className='groupHeader muted'; header.style.margin='6px 0 12px'; header.style.gridColumn = '1 / -1'; header.textContent = title; container.appendChild(header);
+            list.forEach(t=>{
+              const div = document.createElement('div'); div.className = 'track';
+              const h = document.createElement('h3'); h.textContent = `${t.ko} — ${t.en}`; div.appendChild(h);
+              const tags = document.createElement('div'); tags.innerHTML = `<span class="tag">추천: ${t.tags.join(', ')}</span> <span class="tag">권장모드: ${t.modes.join(', ')}</span>`; div.appendChild(tags);
+              const p = document.createElement('p'); p.className='muted small'; p.textContent = t.note; div.appendChild(p);
+              const btnWrap = document.createElement('div'); btnWrap.style.marginTop='8px';
+              const infoBtn = document.createElement('button'); infoBtn.className='smallbtn'; infoBtn.style.marginLeft='8px'; infoBtn.textContent='간단 가이드';
+              safeAdd(infoBtn, 'click', ()=> showDetail(t)); btnWrap.appendChild(infoBtn);
+              div.appendChild(btnWrap); container.appendChild(div);
+            });
+          }catch(e){ console.error('renderGrid failed', e); }
+        }
+
+        function showDetail(track){
+          try{
+            const people = $one('input[name="people"]:checked')?.value || 'solo';
+            const modes = pillNodes.filter(x=>x.classList.contains('active')).map(x=>x.dataset.mode);
+            detailPanel.style.display = 'block';
+            detailPanel.innerHTML = generateDetailedGuide(track, people, modes);
+            detailPanel.scrollIntoView({behavior:'smooth', block:'center'});
+          }catch(e){ console.error('showDetail failed', e); }
+        }
+
+        function generateDetailedGuide(t, people, modes){
+          try{
+            const modeKeywords = (modes && modes.length)? modes.join(', ') : '일반';
+            const lines = [];
+            lines.push(`<h3 style="margin-top:0">${t.ko} — ${t.en}</h3>`);
+            lines.push(`<p class="muted">추천 모드: ${t.modes.join('/')} · 선택 스타일: ${modeKeywords}</p>`);
+
+            lines.push("<h4>사전 준비(3분)</h4>");
+            lines.push("<ol><li>휠/패달 캘리브레이션 확인</li><li>차종/어시스트·데미지 설정을 미리 고정</li><li>타이어·연료 초기값 확인</li></ol>");
+
+            if((modes && modes.includes('practice')) || people==='solo'){
+              lines.push("<h4>연습/타임어택 권장 포맷</h4>");
+              lines.push("<ul><li>웜업 2~3랩: 라인·브레이킹 포인트 확인</li><li>타임어택 25~30분: 3~5번의 완주 시도 후 베스트랩 등록</li><li>리플레이 5분: 섹터 비교로 브레이킹·스티어링 조정</li></ul>");
+              lines.push("<h5>트랙별 팁</h5>");
+              lines.push(generateTrackTips(t));
+
+            // 커플용 가이드 (이전 위치에서 이동됨)
+            
+
+            }
+
+            // 커플용 가벼운 드라이브 가이드 (커플+가벼운 모드에서 표시)
+            if(people==='couple' && modes && modes.includes('light')){
+              lines.push("<h4>커플 가벼운 드라이브 가이드</h4>");
+              lines.push("<ul>");
+              lines.push("<li><strong>경치 우선 주행</strong>: 경쟁보다 경치 감상이 목적입니다. 브레이킹과 코너 진입을 천천히, 출구 가속은 부드럽게 해 차 안 분위기를 즐기세요.</li>");
+              
+              
+              
+              lines.push("<li><strong>부드러운 드라이빙 팁</strong>: 가속은 부드럽게, 브레이크는 미리 짧게, 코너 진입은 안정적으로. 급격한 입력을 피하고 출구 가속과 시선(코너 내비게이션)에 신경 쓰세요.</li>");
+              lines.push("<li><strong>동반 페이스 연습</strong>: 앞사람이 일정한 페이스로 이끌고, 뒤사람은 안정적으로 따라가며 서서히 페이스를 올려 서로의 주행을 배우는 협력형 연습을 권장합니다. 순위 경쟁보다 실력 향상이 목적입니다.</li>");
+              lines.push("<li><strong>차량·세팅 추천</strong>: 오픈톱·클래식카·편안한 GT카를 권장합니다. 승차감(서스) 위주 세팅과 보조(ABS/TC) 켜기로 안정성 확보하세요.</li>");
+              lines.push("<li><strong>주행 시간 권장</strong>: 1회 스틴트 2~4랩(약 8~12분)으로 여유 있게 드라이브하세요. 기분 전환용으로 여러 트랙을 짧게 즐기는 것도 추천합니다.</li>");
+              lines.push("<li><strong>안전 팁</strong>: 초보자는 어시스트를 켜고, 난이도 높은 트랙은 피하세요. 첫 1~2랩은 익숙해지기 위함임을 안내하세요.</li>");
+              lines.push("</ul>");
+              lines.push("<p class='muted'>한줄 요약: 경치 감상 → 포토 포인트 지정 → 2~4랩 여유 주행 → 미니 챌린지(선택)</p>");
+            }
+
+            if(modes && modes.includes('comp')){
+              lines.push("<h4>경쟁/토너먼트 권장 포맷</h4>");
+              lines.push("<ul><li>예선: 2랩(베스트랩 우선)</li><li>결승: 6~8랩(스프린트) — 동일 차종·어시스트 레벨 유지</li><li>페널티: 접촉/코스오프 시 +3~10초(심하면 리스타트)</li></ul>");
+
+              lines.push("<h4>멀티플레이 내구레이스 설정 (호스트용 요약)</h4>");
+              lines.push("<ul>");
+              lines.push("<li><strong>경기 길이</strong>: 시간(분) 또는 랩으로 설정합니다. 내구 감각을 원하면 30~60분 권장(짧게는 15~30분도 가능).</li>");
+              lines.push("<li><strong>연료 소비 배율</strong>: 연료 소모를 높이면 피트스탑 전략이 생깁니다. 일반적으로 중~고배율(예: 10x~25x)을 사용하면 1~2회의 피트가 필요해집니다.</li>");
+              lines.push("<li><strong>타이어 마모 배율</strong>: 마모 배율을 높이면 타이어 교체 전략이 중요해집니다. 5x~20x 사이의 값을 시도해 보세요.</li>");
+              lines.push("<li><strong>시작 연료(리터)</strong>: 시작 연료를 조절하면 피트창(언제 멈출지)이 바뀝니다. 적절한 시작 연료와 연료 배율로 원하는 전략성 수준을 맞추세요.</li>");
+              lines.push("<li><strong>기상 및 시간</strong>: 커스텀/다이내믹 웨더를 사용하면 레이스 중 전략 변경(타이어 선택·피트 타이밍)이 필요해져 드라마가 생깁니다.</li>");
+              lines.push("<li><strong>타이어/규정</strong>: 특정 타이어 종류를 의무화하면(예: 하드 티어 의무) 전략 요소가 추가됩니다. 페널티 규정도 사전에 공지하세요.</li>");
+              lines.push("<li><strong>피트스탑 강제화</strong>: GT7에서는 명시적으로 \"피트스탑 횟수\"를 고정하는 옵션이 없을 수 있으므로, 연료·타이어 배율로 사실상 피트스탑을 유도하는 방식이 일반적입니다.</li>");
+              lines.push("</ul>");
+
+              lines.push("<p class=\"muted\">호스트 팁: 처음에는 짧은 내구(15~30분)로 테스트 세션을 해보고, 참가자 피드백을 받아 연료/타이어 배율을 조정하세요.</p>");
+            }
+
+            if(modes && (modes.includes('party') || modes.includes('offroad'))){
+              lines.push("<h4>파티/내구·오프로드 권장 포맷</h4>");
+              lines.push("<ul>");
+              lines.push("<li><strong>스태틱 스틴트 방식</strong>: 각 참가자가 한 자리에서 개별 스틴트(권장 8~12분 또는 4~6랩)를 주행합니다. 각자 완주한 랩 수 또는 스틴트 내 베스트타임으로 순위를 정합니다. 교대는 없습니다.</li>");
+              lines.push("<li><strong>포인트 합산 방식</strong>: 동일 조건(차종·어시스트 고정)에서 2~3회 스틴트를 진행하고, 각 스틴트의 순위에 따라 포인트(예: 1위=10, 2위=7, 3위=5)를 부여해 총합으로 승자를 결정합니다.</li>");
+              lines.push("<li><strong>재미 요소(옵션)</strong>: 다음 스틴트의 그리드를 역순으로 배치하거나, 매 스틴트 후 소수의 보너스를 주어 긴장감을 높일 수 있습니다. 페널티는 간단하게 '코스오프 +3초'로 적용하세요.</li>");
+              lines.push("<li><strong>멀티플레이 방 설정</strong>: 멀티플레이로 진행할 경우, 방 모드를 '내구(Endurance)'로 설정하세요. 경기 길이·연료·타이어 마모 배율을 함께 조정하면 매장용 내구레이스의 전략성과 재미를 높일 수 있습니다.</li>");
+              lines.push("</ul>");
+
+              if(t.tags && t.tags.includes('offroad')){
+                lines.push("<h5>오프로드 권장</h5>");
+                lines.push("<ul>");
+                lines.push("<li>서스·타이어 설정을 미리 안내하세요(오프로드 모드에서 유리한 세팅 권장).</li>");
+                lines.push("<li>초반 1~2랩은 웜업으로 설정하고, 과격한 추월보다 라인 탐색을 우선시하도록 안내하세요.</li>");
+                lines.push("<li>접촉 후 차량 복구 우선: 트랙복귀 규칙을 간단히 정해 두면 원활하게 진행됩니다.</li>");
+                lines.push("</ul>");
+              }
+            }
+
+            lines.push("<h4>실전 팁 (모든 모드 공통)</h4>");
+            lines.push("<ul><li>첫 1~2랩은 안전제일: 코스 파악이 우선</li><li>브레이킹은 미리·짧게: 초반 브레이킹 포인트를 안정화</li><li>리플레이로 어프로치 비교: 좌우 라인·스로틀 조절 확인</li></ul>");
+
+            if(people==='solo'){
+              lines.push("<h4>라이선스 & 훈련</h4>");
+              lines.push("<ol><li>National B → National A: 기본 브레이킹·코너링 연습</li><li>International B: 고속·라인 유지</li><li>Super License 도전 전에는 2~3개 트랙에서 베스트랩 안정화 권장</li></ol>");
+            }
+
+            return lines.join("\n");
+          }catch(e){ console.error('generateDetailedGuide failed', e); return '<div class="muted">가이드 생성 중 오류가 발생했습니다.</div>'; }
+        }
+
+        function generateTrackTips(t){
+          try{
+            const name = (t.en || "").toLowerCase();
+            if(name.includes('suzuka')) return '<li>스즈카: S자에서 중립 자세를 유지하고 브레이킹 포인트를 정확히 지켜 코너링 속도를 유지하세요.</li>';
+            if(name.includes('nürburgring') || name.includes('nordschleife')) return '<li>뉘르부르크링: 섹터별 목표를 정하고 각 섹터의 베스트랩을 따로 개선하세요. 복잡한 코너에서는 라인을 크게 벌릴 필요 없음.</li>';
+            if(name.includes('spa')) return '<li>스파: Eau Rouge 진입 전 속도 조절, 감속 없이 연속 코너를 이을 때 라인에 집중하세요.</li>';
+            if(name.includes('mount panorama')) return '<li>마운트 파노라마(Bathurst): 다운힐 속도 관리와 좁은 구간에서의 정밀한 라인 유지가 중요합니다.</li>';
+            if(name.includes('laguna') || name.includes('laguna seca')) return '<li>라구나 세카: 코크스크류 진입 시 차량 무게 중심 이동을 이용한 조향이 포인트입니다.</li>';
+            if(t.tags && t.tags.includes('offroad')) return '<li>오프로드: 급격한 스티어 조정 대신 부드러운 입력, 서스/타이어 세팅을 체크하세요.</li>';
+            return '<li>일반 팁: 섹터별 목표를 작게 잡고 한 가지 요소(브레이킹/진입속도/출구 가속)씩 개선하세요.</li>';
+          }catch(e){ console.error('generateTrackTips failed', e); return '<li>팁을 불러오는 중 오류가 발생했습니다.</li>'; }
+        }
+
+        function shuffleArray(a){ const arr = a.slice(); for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+
+        // 초기 표시: 먼저 pill 노드를 새로 바인딩한 뒤 추천을 렌더링
+        try{ refreshPillNodes(); }catch(e){}
+        renderRecommendations();
+      }catch(e){ console.error('Initialization failed', e); showStatus('초기화 중 예외가 발생했습니다. 콘솔을 확인하세요.', false); }
+    });
+  </script>
+</body>
+</html>
