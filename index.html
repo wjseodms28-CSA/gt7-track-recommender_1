@@ -77,7 +77,7 @@
       <div class="howto muted" style="margin-top:12px">사용법: 인원수와 플레이 스타일을 선택하면 <strong>추천 트랙 목록</strong>이 나옵니다. 트랙 카드의 <strong>간단 가이드</strong> 버튼을 눌러 자세한 진행 가이드를 확인하세요.</div>
     </section>
 
-    <section class="panel" style="margin-top:12px">
+    <section class="panel" id="resultsSection" style="margin-top:12px; display:none">
       <h2>추천 트랙</h2>
       <div class="results" id="results">
         <div class="trackGrid" id="topPicks"></div>
@@ -245,6 +245,12 @@
 
         function renderRecommendations(shuffle=false){
           try{
+            // refresh pillNodes in case DOM changed
+            pillNodes = $all('.pill');
+            // 보이는 결과 섹션 확보 및 표시
+            const resultsSection = $one('#resultsSection');
+            if(resultsSection) resultsSection.style.display = 'block';
+
             const people = $one('input[name="people"]:checked')?.value || 'solo';
             const modes = pillNodes.filter(x=>x.classList.contains('active')).map(x=>x.dataset.mode);
             let items = filterTracks(people,modes);
@@ -252,6 +258,7 @@
             const offroad = items.filter(t=>Array.isArray(t.tags) && t.tags.includes('offroad'));
             const nonOff = items.filter(t=>!Array.isArray(t.tags) || !t.tags.includes('offroad'));
             const top = nonOff.slice(0,3); const alt = nonOff.slice(3,6);
+
             topPicksEl.innerHTML = ''; altPicksEl.innerHTML = ''; offPicksEl.innerHTML = ''; detailPanel.style.display = 'none';
             if(top.length){ renderGrid(top, topPicksEl, '추천 트랙 — Top Picks'); }
             if(alt.length){ renderGrid(alt, altPicksEl, '대체 추천 — Alternate Picks'); }
@@ -377,6 +384,20 @@
         function generateTrackTips(t){
           try{
             const name = (t.en || "").toLowerCase();
+            const koName = (t.ko || "").toLowerCase();
+
+            // Special Stage Route X: 초고속 오벌 특화 트랙 팁
+            if(name.includes('special stage route x') || name.includes('special stage') || koName.includes('스페셜')){
+              return ''+
+                '<li>스페셜 스테이지 루트 X: 이 트랙은 긴 직선과 고배율 뱅크로 구성된 초고속 오벌 성격의 이색 트랙입니다. 최고속과 드래프팅(슬립스트림) 경쟁이 핵심입니다.</li>'+
+                '<li>드래프팅 활용: 앞차의 공기 흐름을 이용해 직선 구간에서 속도를 보존하고 추월 찬스를 만드세요. 추월은 마지막 직선과 뱅크를 이용한 타이밍이 중요합니다.</li>'+
+                '<li>저항(드래그) 최소화 세팅 권장: 에어로(다운포스)를 낮추고, 기어비를 고속 영역에 맞춰 최고속을 확보하세요. 단, 직선 대비 코너 안정성은 유지해야 합니다.</li>'+
+                '<li>서스·안정성 조절: 고배율 뱅크 코너에서 차가 불안정해지기 쉬우니 리어 스티프니스와 서스펜션 세팅으로 안정성을 확보하세요.</li>'+
+                '<li>브레이크·타이어 관리: 장시간 고속 주행으로 브레이크·타이어 온도가 상승하기 쉽습니다. 필요한 경우 짧은 페이스 조절로 열 관리를 하세요.</li>'+
+                '<li>연료 전략: 높은 평균속도로 연료 소모가 커질 수 있으니 스프린트인지 장거리인지에 따라 시작 연료를 조절하세요.</li>'+
+                '<li>추월 포인트 연습: 직선 끝과 뱅크 진입부에서의 라인 변화와 브레이크 포인트를 연습해 효율적인 추월을 준비하세요.</li>';
+            }
+
             if(name.includes('suzuka')) return '<li>스즈카: S자에서 중립 자세를 유지하고 브레이킹 포인트를 정확히 지켜 코너링 속도를 유지하세요.</li>';
             if(name.includes('nürburgring') || name.includes('nordschleife')) return '<li>뉘르부르크링: 섹터별 목표를 정하고 각 섹터의 베스트랩을 따로 개선하세요. 복잡한 코너에서는 라인을 크게 벌릴 필요 없음.</li>';
             if(name.includes('spa')) return '<li>스파: Eau Rouge 진입 전 속도 조절, 감속 없이 연속 코너를 이을 때 라인에 집중하세요.</li>';
@@ -389,9 +410,11 @@
 
         function shuffleArray(a){ const arr = a.slice(); for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
 
-        // 초기 표시: 먼저 pill 노드를 새로 바인딩한 뒤 추천을 렌더링
+        // 초기 표시: 먼저 pill 노드를 새로 바인딩만 하고, 자동 렌더링은 하지 않음 (사용자 동작 대기)
         try{ refreshPillNodes(); }catch(e){}
-        renderRecommendations();
+        // 결과 섹션은 초기 로드 시 숨겨둡니다. '추천 받기' 버튼으로 표시됩니다.
+        const resultsSectionEl = $one('#resultsSection');
+        if(resultsSectionEl) resultsSectionEl.style.display = 'none';
       }catch(e){ console.error('Initialization failed', e); showStatus('초기화 중 예외가 발생했습니다. 콘솔을 확인하세요.', false); }
     });
   </script>
