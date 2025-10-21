@@ -309,6 +309,96 @@
           }catch(e){ console.error('generateTrackTips failed', e); return '<li>팁을 불러오는 중 오류가 발생했습니다.</li>'; }
         }
 
+        // 선택한 플레이 스타일 전용 가이드 생성 (요청사항 반영: 해당 스타일만 노출)
+        function generateModeGuides(track, people, modes){
+          const sel = Array.isArray(modes) && modes.length ? new Set(modes) : new Set(['generic']);
+          const blocks = [];
+
+          if(sel.has('light')){
+            blocks.push(`
+              <section class="detail-block">
+                <h4>가벼운 드라이브 / 데이트 가이드</h4>
+                <ul>
+                  <li><strong>목적</strong>: 경치/분위기 우선, 부드러운 주행으로 동승자 경험 극대화</li>
+                  <li><strong>세션 플로우</strong>: 웜업 1랩 → 여유 주행 2~4랩 → 포토 포인트 1~2곳</li>
+                  <li><strong>권장 차량/세팅</strong>: 로드카/클래식/GT카, ABS On, TCS 2~3, ASM On, 충돌 데미지 Light</li>
+                  <li><strong>룰</strong>: 접촉-코스오프 페널티 Off, 타이어/연료 1x, 날씨 고정</li>
+                  <li><strong>미니 챌린지(선택)</strong>: 동행 페이스 유지 주행, 베스트 섹터 1개만 갱신 도전</li>
+                </ul>
+              </section>`);
+          }
+
+          if(sel.has('practice')){
+            blocks.push(`
+              <section class="detail-block">
+                <h4>연습 / 타임어택 가이드</h4>
+                <ul>
+                  <li><strong>세션 구성</strong>: 웜업 2랩 → 타임어택 20~30분 → 리플레이/고스트 비교 5분</li>
+                  <li><strong>목표 설정</strong>: 섹터별 목표 +0.3s 단위로 설정, 3랩 묶음으로 시도</li>
+                  <li><strong>권장 세팅</strong>: 타이어 RH, 연료/마모 1x, 페널티 Off, 고스트 On</li>
+                  <li><strong>훈련 포인트</strong>: 브레이킹 포인트 고정 → 진입 속도 안정화 → 출구 슬립 최소화</li>
+                  <li><strong>트랙 팁</strong>: <ul>${generateTrackTips(track)}</ul></li>
+                </ul>
+              </section>`);
+          }
+
+          if(sel.has('comp')){
+            blocks.push(`
+              <section class="detail-block">
+                <h4>경쟁 / 토너먼트 가이드</h4>
+                <ul>
+                  <li><strong>예선</strong>: 2~3랩 타임어택, 그리드 순위 결정</li>
+                  <li><strong>결승</strong>: 6~10랩 스프린트(트랙 길이에 맞춰 조절)</li>
+                  <li><strong>로비 권장 설정</strong>: BoP On, 동일 타이어 규정, 슬립스트림 Real, 데미지 Light, 코너컷/코스오프 페널티 Mild</li>
+                  <li><strong>스타트 방식</strong>: 그리드 스타트(점프스타트 페널티 On)</li>
+                  <li><strong>운영 팁</strong>: 경고 2회 → 페널티 1회(3~5초), 재출발은 다수 사고 시에만</li>
+                </ul>
+              </section>`);
+          }
+
+          if(sel.has('party')){
+            blocks.push(`
+              <section class="detail-block">
+                <h4>파티 / 내구 가이드</h4>
+                <ul>
+                  <li><strong>길이</strong>: 20~45분(테스트용 15분도 가능)</li>
+                  <li><strong>전략 요소</strong>: 연료 x10~25, 타이어 x5~15 → 최소 1~2회 피트 유도</li>
+                  <li><strong>날씨</strong>: 다이내믹/가변 기상으로 타이어 교체 상황 연출</li>
+                  <li><strong>팀 운영</strong>: 개인 스틴트 포인트 합산 또는 팀 릴레이 1인 5~8분</li>
+                  <li><strong>권장 규정</strong>: BoP On, 데미지 Light, 페널티 Mild, Safety Car 없음</li>
+                </ul>
+              </section>`);
+          }
+
+          if(sel.has('offroad')){
+            blocks.push(`
+              <section class="detail-block">
+                <h4>오프로드 / 이색 가이드</h4>
+                <ul>
+                  <li><strong>차량/타이어</strong>: 랠리/그라벨 타이어, 차고 높이 +, 서스 소프트</li>
+                  <li><strong>컨트롤</strong>: ABS Weak, TCS 2~4, 카운터스티어 강함(패드 사용자 권장)</li>
+                  <li><strong>세션</strong>: 웜업 1랩(라인 탐색) → 스틴트 4~6랩 × 2세트</li>
+                  <li><strong>룰</strong>: 접촉 관대, 코스 복귀 규칙 명확히(안전 우선), 리스폰 금지</li>
+                  <li><strong>특이점</strong>: 점프 구간 착지 전 스로틀 릴리즈, 눈길/모래에서 브레이크는 직진 구간에</li>
+                </ul>
+              </section>`);
+          }
+
+          if(sel.has('generic')){
+            blocks.push(`
+              <section class="detail-block">
+                <h4>일반 가이드</h4>
+                <ul>
+                  <li><strong>사전 준비</strong>: 휠/패달 캘리브레이션, 어시스트 확인, 타이어/연료 초기값 체크</li>
+                  <li><strong>기본 루틴</strong>: 웜업 1~2랩 → 본세션 15~25분 → 리플레이 5분</li>
+                  <li><strong>안전</strong>: 첫 1랩은 추월 금지, 코스오프 시 완전 감속 후 복귀</li>
+                </ul>
+              </section>`);
+          }
+
+          return blocks.join('\n'); // normalized newline (fixed)
+        }
+
         function showDetail(track){
           try{
             const people = $one('input[name="people"]:checked')?.value || 'solo';
@@ -316,9 +406,10 @@
             detailPanel.style.display = 'block';
             const lines = [];
             lines.push(`<h3 style=\"margin-top:0\">${track.ko} — ${track.en}</h3>`);
-            lines.push(`<p class=\"muted\">추천 모드: ${track.modes.join('/')} · 선택 스타일: ${(modes&&modes.join(', ')||'일반')} · 코너 난이도: ${(track.difficulty||'N/A')}</p>`);
-            lines.push('<h4>사전 준비(3분)</h4>');
-            lines.push('<ol><li>휠/패달 캘리브레이션 확인</li><li>차종/어시스트 고정</li><li>타이어·연료 초기값 확인</li></ol>');
+            const modeLabel = (modes && modes.length) ? modes.join(', ') : '일반';
+            const diffLabel = {easy:'쉬움', medium:'보통', hard:'어려움'}[track.difficulty||'medium'];
+            lines.push(`<p class=\"muted\">선택 스타일: ${modeLabel} · 코너 난이도: ${diffLabel}</p>`);
+            lines.push(generateModeGuides(track, people, modes));
             lines.push('<h4>트랙 팁</h4>');
             lines.push('<ul>'+generateTrackTips(track)+'</ul>');
             detailPanel.innerHTML = lines.join('\n');
@@ -326,7 +417,14 @@
           }catch(e){ console.error('showDetail failed', e); }
         }
 
-        function shuffleArray(a){ const arr = a.slice(); for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+        function shuffleArray(a){
+          const arr = a.slice();
+          for(let i=arr.length-1;i>0;i--){
+            const j = Math.floor(Math.random()*(i+1));
+            [arr[i],arr[j]] = [arr[j],arr[i]];
+          }
+          return arr;
+        }
 
         function renderRecommendations(shuffle=false){
           try{
